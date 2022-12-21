@@ -1,3 +1,6 @@
 [submodule "app/edit"]
 	path = app/edit
 	url = https://github.com/fusionpbx/fusionpbx-app-edit
+[submodule "app/testrepo"]
+	path = app/testrepo
+	url = https://github.com/demonspork/testrepo
