@@ -1,0 +1,3 @@
+[submodule "app/edit"]
+	path = app/edit
+	url = https://github.com/fusionpbx/fusionpbx-app-edit
