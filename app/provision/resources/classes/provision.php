@@ -890,6 +890,23 @@
 				//get the extensions and add them to the contacts array
 					if (is_uuid($device_uuid) && is_uuid($domain_uuid) && $this->settings->get('provision','contact_extensions',false)) {
 
+						//get the number of extensions
+							$sql = "select count(*) as num_rows from v_extensions where domain_uuid = '".$domain_uuid."' ";
+							$database = new database;
+							$extension_count = $database->select($sql, $parameters, 'row');
+							$extension_count = $extension_count['num_rows'];
+							unset($result);	
+
+						//get the line One's Call Group
+							$sql = "select call_group ";
+							$sql .= "from v_extensions ";
+							$sql .= "where domain_uuid = '".$domain_uuid."' ";
+							$sql .= "and extension = '".$lines[1]['user_id']."' ";
+							$database = new database;
+							$call_groups = $database->select($sql, $parameters, 'row');
+							$call_group = $call_groups['call_group'];
+							unset ($result);
+
 						//get contacts from the database
 							$sql = "select extension_uuid as contact_uuid, directory_first_name, directory_last_name, ";
 							$sql .= "effective_caller_id_name, effective_caller_id_number, ";
@@ -897,6 +914,11 @@
 							$sql .= "from v_extensions ";
 							$sql .= "where domain_uuid = :domain_uuid ";
 							$sql .= "and enabled = 'true' ";
+
+							if (intval($extension_count) > 99 && $device_vendor == "polycom") {
+								$sql .= "and call_group = '".$call_group."' ";
+							}
+
 							$sql .= "and directory_visible = 'true' ";
 							$sql .= "order by directory_first_name, effective_caller_id_name asc ";
 							$parameters['domain_uuid'] = $domain_uuid;
