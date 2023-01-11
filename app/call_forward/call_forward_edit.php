@@ -159,7 +159,7 @@
 
 		//check for all required data
 			if (strlen($msg) > 0 && strlen($_POST["persistformvar"]) == 0) {
-				$document['title'] = $text['title-call_routing'];
+				$document['title'] = $text['title-call_forward'];
 				require_once "resources/header.php";
 				require_once "resources/persist_form_var.php";
 				echo "<div align='center'>\n";
@@ -267,7 +267,7 @@
 
 		//save the data
 			$database = new database;
-			$database->app_name = 'call_routing';
+			$database->app_name = 'call_forward';
 			$database->app_uuid = '19806921-e8ed-dcff-b325-dd3e5da4959d';
 			$database->save($array);
 			unset($array);
@@ -282,7 +282,7 @@
 					$array['follow_me_destinations'][]['follow_me_destination_uuid'] = $follow_me_delete_uuid;
 				}
 				$database = new database;
-				$database->app_name = 'call_routing';
+				$database->app_name = 'call_forward';
 				$database->app_uuid = '19806921-e8ed-dcff-b325-dd3e5da4959d';
 				$database->delete($array);
 				unset($array);
@@ -460,7 +460,7 @@
 	}
 
 //show the header
-	$document['title'] = $text['title-call_routing'];
+	$document['title'] = $text['title-call_forward'];
 	require_once "resources/header.php";
 
 //pre-populate the form
