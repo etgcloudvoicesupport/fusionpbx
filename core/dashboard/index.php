@@ -72,6 +72,7 @@
 	$sql .= "dashboard_name, \n";
 	$sql .= "dashboard_path, \n";
 	$sql .= "dashboard_column_span, \n";
+	$sql .= "dashboard_details_state, \n";
 	$sql .= "dashboard_order, \n";
 	$sql .= "cast(dashboard_enabled as text), \n";
 	$sql .= "dashboard_description \n";
@@ -222,7 +223,7 @@
   grid-column: auto;
 }
 
-/* Screen smaller than 550px? 1 columns */
+/* Screen smaller than 575px? 1 columns */
 @media (max-width: 575px) {
   .widgets { grid-template-columns: repeat(1, minmax(100px, 1fr)); }
   .col-num { grid-column: span 1; }
@@ -239,7 +240,7 @@
 	?>
 }
 
-/* Screen larger than 550px? 2 columns */
+/* Screen larger than 575px? 2 columns */
 @media (min-width: 575px) {
   .widgets { grid-template-columns: repeat(2, minmax(100px, 1fr)); }
   .col-num { grid-column: span 2; }
@@ -254,6 +255,17 @@
 				}
 				echo "#".$dashboard_name." {\n";
 				echo "	grid-column: span ".$dashboard_column_span.";\n";
+				echo "}\n";
+			}
+			if ($row['dashboard_details_state'] == "contracted") {
+				echo "#".$dashboard_name." .hud_box .hud_details {\n";
+				echo "	display: none;\n";
+				echo "}\n";
+			}
+			if ($row['dashboard_details_state'] == "hidden") {
+				echo "#".$dashboard_name." .hud_box .hud_expander, \n";
+				echo "#".$dashboard_name." .hud_box .hud_details {\n";
+				echo "	display: none;\n";
 				echo "}\n";
 			}
 		}
@@ -357,6 +369,7 @@
 			draggable: ".widget",
 			preventOnFilter: true,
 			ghostClass: 'ghost',
+			/*
 			onChange: function (evt) {
 				//check if chart exists
 				let chart_status = Chart.getChart(evt.item.id + "_chart");
@@ -371,6 +384,7 @@
 					chart = new Chart(context, config);
 				}
 			},
+			*/
 			onSort: function (evt) {
 				let widget_ids = document.querySelectorAll("#widgets > div[id]");
 				let widget_ids_list = [];
