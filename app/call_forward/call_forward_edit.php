@@ -350,6 +350,16 @@
 			}
 		*/
 
+		//Ringotel Settings
+			if ($_SESSION['profiles']['ringotel_enabled']['boolean'] == 'true') {
+				include "app/profiles/resources/classes/ringotel.php";
+				$ringotel = new Ringotel;
+				$ringotelfwd = Ringotel::buildUserSettingsArray($extension_uuid);
+				$ringotel->setUserSettings($ringotelfwd);
+				$dnd = ($do_not_disturb == 'true');
+				$ringotel->setUserState($ringotelfwd['id'],$dnd);
+			}
+
 		//send feature event notify to the phone
 			if ($_SESSION['device']['feature_sync']['boolean'] == "true") {
 				$ring_count = ceil($call_timeout / 6);
