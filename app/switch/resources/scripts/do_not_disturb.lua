@@ -201,6 +201,20 @@
 			dbh:query(sql, params);
 	end);
 
+--update ringotel API
+	local user_agent = session:getVariable("sip_user_agent");
+	local ringotel_enabled = settings:get("profiles", "ringotel_enabled", "boolean");
+	if (ringotel_enabled == "true" and not string.find(user_agent,"Ringotel")) then
+		api_key = settings:get("ringotel", "api_key", "text");
+		ringotel_api = require "app.feature_event.resources.functions.ringotel";
+		ringotel_id, orgid, activated = ringotel_api.get_user_data(extension, domain_name);
+	end
+	if (activated == "t") then
+		local ringotel_data = {method = "setUserState", params = {id = ringotel_id, orgid = orgid, dnd = (do_not_disturb == "true")} };
+		local api_result = ringotel_api.post(json.encode(ringotel_data));
+		freeswitch.consoleLog("notice", "[feature_event] ringotel api result: " .. api_result .. "\n");
+	end
+
 --send notify to phone if feature sync is enabled
 	if settings:get('device', 'feature_sync', 'boolean') == 'true' then
 		-- Get values from the database
