@@ -1,0 +1,7 @@
+<context name="{v_context}">
+	<extension name="update_ignore_ua" number="" continue="true" app_uuid="dc6a4865-5f69-4801-b235-fee17222a7ee" order="95">
+		<condition field="${sip_user_agent}" expression="Ringotel" break="never">
+			<action application="set" data="update_ignore_ua=true"/>
+		</condition>
+	</extension>
+</context>
