@@ -2,18 +2,15 @@
 
 //check the permission
 	if (defined('STDIN')) {
-		//set the include path
-		$conf = glob("{/usr/local/etc,/etc}/fusionpbx/config.conf", GLOB_BRACE);
-		set_include_path(parse_ini_file($conf[0])['document.root']);
+		//includes files
+		require_once dirname(__DIR__, 4) . "/resources/require.php";
 	}
 	else {
 		exit;
 	}
 
 //include files
-	require_once "resources/require.php";
 	include "resources/classes/permissions.php";
-	require $_SERVER['DOCUMENT_ROOT']."/app/email_queue/resources/functions/transcribe.php";
 
 //increase limits
 	set_time_limit(0);
@@ -31,8 +28,8 @@
 	if (is_uuid($_GET['email_queue_uuid'])) {
 		$email_queue_uuid = $_GET['email_queue_uuid'];
 		$hostname = urldecode($_GET['hostname']);
-		$debug = $_GET['debug'];
-		$sleep_seconds = $_GET['sleep'];
+		$debug = $_GET['debug'] ?? null;
+		$sleep_seconds = $_GET['sleep'] ?? null;
 	}
 	else {
 		//invalid uuid
@@ -52,7 +49,7 @@
 		//check to see if the process is running
 		if (file_exists($file)) {
 			$pid = file_get_contents($file);
-			if (posix_getsid($pid) === false) { 
+			if (posix_getsid($pid) === false) {
 				//process is not running
 				$exists = false;
 			}
@@ -86,7 +83,7 @@
 //create the process id file if the process doesn't exist
 	if (!$pid_exists) {
 		//remove the old pid file
-		if (file_exists($file)) {
+		if (!empty($pid_file) && file_exists($pid_file)) {
 			unlink($pid_file);
 		}
 
@@ -145,12 +142,15 @@
 	}
 	unset($parameters);
 
+//get the email queue settings
+	$setting = new settings(["domain_uuid" => $domain_uuid]);
+
 //get the call center settings
-	$retry_limit = $_SESSION['email_queue']['retry_limit']['numeric'];
-	//$retry_interval = $_SESSION['email_queue']['retry_interval']['numeric'];
+	$retry_limit = $setting->get('email_queue', 'retry_limit');
+	$transcribe_enabled = $setting->get('voicemail', 'transcribe_enabled');
 
 //set defaults
-	if (strlen($email_retry_count) == 0) {
+	if (empty($email_retry_count)) {
 		$email_retry_count = 0;
 	}
 
@@ -180,7 +180,7 @@
 		//$voicemail_description = $row["voicemail_description"];
 		//$voicemail_name_base64 = $row["voicemail_name_base64"];
 		//$voicemail_tutorial = $row["voicemail_tutorial"];
-		echo "transcribe enabled: ".$voicemail_transcription_enabled."\n";
+		
 	}
 	unset($parameters);
 
@@ -191,38 +191,42 @@
 	$database = new database;
 	$email_queue_attachments = $database->select($sql, $parameters, 'all');
 	if (is_array($email_queue_attachments) && @sizeof($email_queue_attachments) != 0) {
-		foreach($email_queue_attachments as $field) {
+		foreach($email_queue_attachments as $i => $field) {
 
 			$email_queue_attachment_uuid = $field['email_queue_attachment_uuid'];
 			$domain_uuid = $field['domain_uuid'];
 			$email_attachment_type = $field['email_attachment_type'];
 			$email_attachment_path = $field['email_attachment_path'];
 			$email_attachment_name = $field['email_attachment_name'];
-			//$email_attachment_base64= $field['email_attachment_base64'];
+			$email_attachment_mime_type = $field['email_attachment_mime_type'];
 
-			switch ($email_attachment_type) {
-				case "wav":
-					$mime_type = "audio/x-wav";
-					break;
-				case "mp3":
-					$mime_type = "audio/x-mp3";
-					break;
-				case "pdf":
-					$mime_type = "application/pdf";
-					break;
-				case "tif":
-					$mime_type = "image/tiff";
-					break;
-				case "tiff":
-					$mime_type = "image/tiff";
-					break;
-				default:
-					$mime_type = "binary/octet-stream";
-					break;
+			if (!$email_attachment_mime_type) {
+				switch ($email_attachment_type) {
+					case "wav":
+						$email_attachment_mime_type = "audio/x-wav";
+						break;
+					case "mp3":
+						$email_attachment_mime_type = "audio/x-mp3";
+						break;
+					case "pdf":
+						$email_attachment_mime_type = "application/pdf";
+						break;
+					case "tif":
+					case "tiff":
+						$email_attachment_mime_type = "image/tiff";
+						break;
+					default:
+						$email_attachment_mime_type = "binary/octet-stream";
+						break;
+				}
 			}
 
-			if (isset($voicemail_transcription_enabled) && $voicemail_transcription_enabled == 'true') {
+			if (isset($transcribe_enabled) && $transcribe_enabled === 'true' && isset($voicemail_transcription_enabled) && $voicemail_transcription_enabled === 'true') {
+				//debug message  
+				echo "transcribe enabled: true\n";
+
 				//transcribe the attachment
+				require $_SERVER['DOCUMENT_ROOT']."/app/email_queue/resources/functions/transcribe.php";
 				if ($email_attachment_type == 'wav' || $email_attachment_type == 'mp3') {
 					$field = transcribe($email_attachment_path, $email_attachment_name, $email_attachment_type);
 					echo "transcribe path: ".$email_attachment_path."\n";
@@ -233,13 +237,11 @@
 					$transcribe_message = $field['message'];
 				}
 
-				//echo "email_body before: ".$email_body."\n";
+				//prepare the email body
 				$email_body = str_replace('${message_text}', $transcribe_message, $email_body);
-				//$email_debug = $field['message'];
-				//echo "email_body after: ".$email_body."\n";
-				//unset($field);
 			}
 			else {
+				//prepare the email body
 				$email_body = str_replace('${message_text}', '', $email_body);
 			}
 
@@ -256,9 +258,11 @@
 			//$email_attachments[0]['value'] = base64_encode(file_get_contents($email_attachment_path.'/'.$email_attachment_name));
 
 			//add email attachment as a file for the send_email function
-			$email_attachments[0]['type'] = 'file';
-			$email_attachments[0]['name'] = $email_attachment_name;
-			$email_attachments[0]['value'] = $email_attachment_path.'/'.$email_attachment_name;
+			$email_attachments[$i]['cid'] = $field['email_attachment_cid'];
+			$email_attachments[$i]['mime_type'] = $email_attachment_mime_type;
+			$email_attachments[$i]['name'] = $email_attachment_name;
+			$email_attachments[$i]['path'] = $email_attachment_path;
+			$email_attachments[$i]['base64'] = $field['email_attachment_base64'];
 		}
 	}
 	unset($parameters);
@@ -286,27 +290,48 @@
 		unset($parameters);
 	}
 
-//send email
-	//ob_start();
-	//$sent = !send_email($email_to, $email_subject, $email_body, $email_error, null, null, null, null, $email_attachments) ? false : true;
-	//$response = ob_get_clean();
-	//echo $response;
+//add email settings
+	$email_settings = '';
+	$email_setting_array = $setting->get('email');
+	ksort($email_setting_array);
+	foreach ($email_setting_array as $name => $value) {
+		if ($name == 'smtp_password') { $value = '[REDACTED]'; }
+		$email_settings .= $name.': '.$value."\n";
+	}
+
+//parse email and name
+	if (!empty($email_from)) {
+		if (valid_email($email_from)) {
+			$email_from_address = $email_from;
+		}
+		else {
+			$lt_pos = strpos($email_from, '<');
+			if ($lt_pos !== false) {
+				$email_from_address = str_replace('>', '', substr($email_from, $lt_pos + 1));
+				$email_from_name = trim(substr($email_from, 0, $lt_pos));
+			}
+		}
+	}
 
 //send the email
 	$email = new email;
 	$email->domain_uuid = $domain_uuid;
 	$email->from_address = $email_from_address;
-	$email->from_name = $email_from_name;
+	if (!empty($email_from_name)) {
+		$email->from_name = $email_from_name;
+	}
 	$email->recipients = $email_to;
 	$email->subject = $email_subject;
 	$email->body = $email_body;
 	$email->attachments = $email_attachments;
+	$email->debug_level = 3;
 	$email->method = 'direct';
-	$sent = $email->send();
-	//$response = $email->email_error;
+	$email_status = $email->send();
+	$email_error = $email->error;
+	$email_response = $email->response;
 
 //send the email
-	if ($sent) {
+	if ($email_status) {
 
 		//set the email status to sent
 		$sql = "update v_email_queue ";
@@ -315,9 +340,11 @@
 		if (isset($transcribe_message)) {
 			$sql .= "email_transcription = :email_transcription, ";
 		}
+		$sql .= "email_response = :email_response, ";
 		$sql .= "update_date = now() ";
 		$sql .= "where email_queue_uuid = :email_queue_uuid; ";
 		$parameters['email_queue_uuid'] = $email_queue_uuid;
+		$parameters['email_response'] = $email_settings."\n".$email_response;
 		if (isset($transcribe_message)) {
 			$parameters['email_transcription'] = $transcribe_message;
 		}
@@ -361,11 +388,11 @@
 			$domain_name = $database->select($sql, $parameters, 'column');
 
 			//send the message waiting status
-			$fp = event_socket_create($_SESSION['event_socket_ip_address'], $_SESSION['event_socket_port'], $_SESSION['event_socket_password']);
-			if ($fp) {
+			$esl = event_socket::create();
+			if ($esl->is_connected()) {
 				//$switch_cmd .= "luarun app.lua voicemail mwi ".$voicemail_id."@".$domain_name;
-				$switch_cmd .= "luarun app/voicemail/resources/scripts/mwi_notify.lua ".$voicemail_id." ".$domain_name." 0 0";
-				$switch_result = event_socket_request($fp, 'api '.$switch_cmd);
+				$switch_cmd .= "luarun app/voicemail/resources/scripts/mwi_notify.lua $voicemail_id $domain_name 0 0";
+				$switch_result = event_socket::api($switch_cmd);
 				echo $switch_cmd."\n";
 			}
 			else {
@@ -437,15 +464,13 @@
 		else {
 			$sql .= "set email_status = 'trying', ";
 		}
+		$sql .= "email_response = :email_response, ";
 		$sql .= "email_retry_count = :email_retry_count, ";
 		$sql .= "update_date = now() ";
-		//$sql .= ", email_debug = :email_debug ";
 		$sql .= "where email_queue_uuid = :email_queue_uuid; ";
 		$parameters['email_queue_uuid'] = $email_queue_uuid;
-		//$parameters['email_debug'] = $mailer_error;
+		$parameters['email_response'] = $email_settings."\n".$email_response;
 		$parameters['email_retry_count'] = $email_retry_count;
-		//echo $sql."\n";
-		//print_r($parameters);
 		$database = new database;
 		$database->execute($sql, $parameters);
 		unset($parameters);
@@ -497,7 +522,7 @@
 	unset($mail);
 
 //save output to
-	//$fp = fopen(sys_get_temp_dir()."/mailer-app.log", "a");
+	//$esl = fopen(sys_get_temp_dir()."/mailer-app.log", "a");
 
 //prepare the output buffers
 	//ob_end_clean();
@@ -512,7 +537,8 @@
 
 	//ob_end_clean(); //clean the buffer
 
-	//fwrite($fp, $content);
-	//fclose($fp);
+	//fwrite($esl, $content);
+	//fclose($esl);
 
 ?>
+

@@ -1,7 +1,7 @@
 <?php
 
-//includes
-	require_once "resources/require.php";
+//includes files
+	require_once dirname(__DIR__, 4) . "/resources/require.php";
 
 //check permisions
 	require_once "resources/check_auth.php";
@@ -227,16 +227,27 @@
 		$stats['system']['messages']['new'] = 0;
 		$stats['domain']['messages']['total'] = 0;
 		$stats['domain']['messages']['new'] = 0;
-		$sql = "select domain_uuid, message_status from v_voicemail_messages";
-		$result = $database->select($sql, null, 'all');
+		$sql = "SELECT count(*) total, count(*) FILTER(WHERE message_status IS DISTINCT FROM 'saved') AS new ";
+		$sql .= "FROM v_voicemail_messages WHERE domain_uuid = :domain_uuid ";
+		$parameters["domain_uuid"] = $_SESSION['domain_uuid'];
+		$result = $database->select($sql, $parameters, 'all');
+		
 		if (is_array($result) && sizeof($result) != 0) {
-			$stats['system']['messages']['total'] = sizeof($result);
 			foreach ($result as $row) {
-				$stats['system']['messages']['new'] += ($row['message_status'] != 'saved') ? 1 : 0;
-				if ($row['domain_uuid'] == $_SESSION['domain_uuid']) {
-					$stats['domain']['messages']['total']++;
-					$stats['domain']['messages']['new'] += ($row['message_status'] != 'saved') ? 1 : 0;
-				}
+				$stats['domain']['messages']['total'] = $row['total'];
+				$stats['domain']['messages']['new'] = $row['new'];
+			}
+		}
+		unset($sql, $result, $parameters);
+		
+		$sql = "SELECT count(*) total, count(*) FILTER(WHERE message_status IS DISTINCT FROM 'saved') AS new ";
+		$sql .= "FROM v_voicemail_messages ";
+		$result = $database->select($sql, null, 'all');
+		
+		if (is_array($result) && sizeof($result) != 0) {
+			foreach ($result as $row) {
+				$stats['system']['messages']['total'] = $row['total'];
+				$stats['system']['messages']['new'] = $row['new'];
 			}
 		}
 		unset($sql, $result);
@@ -285,7 +296,7 @@
 	if ($show_stat) {
 		//add doughnut chart
 		?>
-		<div style='display: flex; flex-wrap: wrap; justify-content: center; padding-bottom: 20px;'>
+		<div style='display: flex; flex-wrap: wrap; justify-content: center; padding-bottom: 20px;' onclick="$('#hud_system_counts_details').slideToggle('fast');">
 			<div style='width: 250px; height: 175px;'><canvas id='system_counts_chart'></canvas></div>
 		</div>
 
@@ -315,7 +326,7 @@
 								chart_text: '<?php echo $domain_total; ?>'
 							},
 							legend: {
-							position: 'right',
+								position: 'right',
 								reverse: true,
 								labels: {
 									usePointStyle: true,
@@ -472,7 +483,7 @@
 
 	echo "</table>\n";
 	echo "</div>";
-	$n++;
+	//$n++;
 
 	echo "<span class='hud_expander' onclick=\"$('#hud_system_counts_details').slideToggle('fast');\"><span class='fas fa-ellipsis-h'></span></span>\n";
 	echo "</div>\n";
