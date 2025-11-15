@@ -10,3 +10,19 @@ secure/*.sqlite
 *.php~
 
 app/yealink/resources/firmware/*
+app/call_recordings
+app/connectwise
+app/emergency_locations
+app/mobile_twinning
+app/ms_teams_direct_routing
+app/network_e911
+app/profiles
+app/scripts/resources/scripts/app/servers/resources/clear_proxy_cache.lua
+app/sessiontalk
+app/sms_apps
+app/sms_messages
+app/sms_to_email
+app/tts_recordings
+app/webphone
+app/zoiper
+app/zoiper_dir

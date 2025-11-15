@@ -209,7 +209,7 @@
 					$rows = $this->database->select($sql, $parameters, 'all');
 					unset($sql, $parameters);
 
-					$extension_xml_condensed = false;
+					$call_group_array = array();
 					if (is_array($rows) && @sizeof($rows) != 0) {
 						foreach ($rows as $row) {
 							$call_group = $row['call_group'] ?? '';

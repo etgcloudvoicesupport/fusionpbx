@@ -447,6 +447,9 @@
 		echo 	"</span>\n";
 		echo 	"</form>";
 	}
+	if (permission_exists('tts_recording_add')) {
+		echo button::create(['type'=>'button','label'=>'Text-to-Speech','icon'=>'fa fa-microphone','id'=>'btn_tts','link'=>'../tts_recordings/tts_recordings.php']);
+	}
 	if (permission_exists('recording_delete') && $recordings) {
 		echo button::create(['type'=>'button','label'=>$text['button-delete'],'icon'=>$theme_button_icon_delete,'id'=>'btn_delete','name'=>'btn_delete','style'=>'display: none;','onclick'=>"modal_open('modal-delete','btn_delete');"]);
 	}

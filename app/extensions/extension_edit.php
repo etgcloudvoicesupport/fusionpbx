@@ -680,7 +680,7 @@
 												}
 
 												//build the devices array
-												if (($device_unique && $device_mac_address != '000000000000') || $device_mac_address == '000000000000') {
+												if (($device_unique && $device_address != '000000000000') || $device_address == '000000000000') {
 													$array["devices"][$j]["device_uuid"] = $device_uuids[$d];
 													$array["devices"][$j]["domain_uuid"] = $domain_uuid;
 													$array["devices"][$j]["device_address"] = $device_address;
