@@ -189,7 +189,9 @@
 	$parameters['device_address'] = $device_address;
 	if ($domain_filter) {
 		$sql .= "and n.domain_name = :domain_name";
-		$parameters['domain_name'] = $_SERVER['HTTP_HOST'];
+		$domain_array = explode(":", $_SERVER["HTTP_HOST"]);
+		$domain_name = $domain_array[0];
+		$parameters['domain_name'] = $domain_name;
 	}
 	$row = $database->select($sql, $parameters, 'row');
 	if (is_array($row)) {
